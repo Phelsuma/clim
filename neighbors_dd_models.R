@@ -1,3 +1,5 @@
+####### try including winter in DD
+
 # fill gaps in Time Series 
 library(tidyverse)
 library(magrittr)
@@ -7,13 +9,20 @@ library(purrr)
 library(tsibble)
 library(feasts)
 
+citation("tidyverse")
+citation("magrittr")
+citation("lubridate")
+citation("imputeTS")
+citation("purrr")
+citation("tsibble")
+citation("feasts")
+
 # read in takapourewa data
 neighbors_df  <- readr::read_csv("data/phd_sound_clifro_temps.csv")
 # read in neighbor station data
 takapourewa_df <- read_csv("data/phd_takapourewa_clifro_temps_1990_present.csv") %>%
           rename(c('takapourewa_tmax_c' = tmax_c,
-                   'takapourewa_tmin_c' = tmin_c
-          ))
+                   'takapourewa_tmin_c' = tmin_c))
 
 # merge
 takapourewa_sounds_full_temps_df <- left_join(neighbors_df, takapourewa_df, by = 'date_local') %>%
@@ -93,7 +102,7 @@ neighbors_imputed_tmax_ts_seadec_ma %>%
           summarize(
                     min = min(tmax_c))
 
-# degree day models 
+# degree day models
 # splitting by station because issues otherwise 
 
 # brothers 
@@ -108,8 +117,7 @@ brothers_dd_models <- neighbors_imputed_tmax_ts_seadec_ma %>%
           mutate(cumsum_degree_day = as.numeric(unlist(tapply(overthresh, year, cumsum)))) 
 
 # plot degree day models
-
-mid <- median(brothers_dd_models$year)
+mid <- median(brothers_dd_models$year) # aesthetics below
 
 brothers_dd_models %>%
           ggplot()+
@@ -131,7 +139,6 @@ brothers_dd_models %>%
           theme_minimal() 
 
 # nelson DD 
-
 nelson_dd_models <- neighbors_imputed_tmax_ts_seadec_ma %>%
           as_tibble() %>% 
           filter(station == 'nelson_aero') %>% 
@@ -150,7 +157,7 @@ nelson_dd_models %>%
                         color = year))+
           labs(x = "date (julian day)",
                y = "degree day (tmax_c)",
-               title = "N Brother degree day (tmax >10c)") + # scale_color_gradient2 not needed with facet_wrap (in that case use color = factor(year) and pick better colour ramp +
+               title = "Nelson degree day (tmax >10c)") + # scale_color_gradient2 not needed with facet_wrap (in that case use color = factor(year) and pick better colour ramp +
           geom_text(data = nelson_dd_models %>% 
                               filter(julian == last(julian)), 
                     aes(label = year,
@@ -202,14 +209,14 @@ dd_station_year_summary %>%
           select(year, brothers) %>% 
           arrange(desc(brothers)) %>%  # arrange by hottest 
           mutate(highest_dd_year_rank_brothers = 1:nrow(.)) %>% 
-          arrange(desc(year))  # arrange by year
+          arrange((highest_dd_year_rank_brothers))  # arrange by year
 
 # nelson
 dd_station_year_summary %>% 
           select(year, nelson_aero) %>% 
           arrange(desc(nelson_aero)) %>%  # arrange by hottest 
           mutate(highest_dd_year_rank_nelson = 1:nrow(.)) %>% 
-          arrange(desc(year))  # arrange by year
+          arrange((highest_dd_year_rank_nelson))  # arrange by year
 
 # lines & points for brothers & nelsons DD 
 neighbors_dd %>% 

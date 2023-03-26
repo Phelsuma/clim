@@ -2,13 +2,12 @@
 # test gap filling methods
 # probably should make some functions if keeping
 library(imputeTS) # https://cran.rstudio.com/web/packages/imputeTS/vignettes/Cheat_Sheet_imputeTS.pdf
-# Moritz, Steffen and Bartz-Beielstein, Thomas.
-# "imputeTS: Time Series Missing Value Imputation in R."
-# R Journal 9.1 (2017). doi: 10.32614/RJ-2017-009.
-
 library(Metrics)
 
-longest_contingous_complete_case_tmax_df <- read_csv("longest_contingous_complete_case_tmax_df.csv")
+citation("imputeTS")
+citation("Metrics")
+
+longest_contingous_complete_case_tmax_df <- read_csv("data/longest_contingous_complete_case_tmax_df.csv")
 
 # create gaps
 set.seed(2023)
@@ -90,8 +89,8 @@ ss_preds <- test_predictions %>%
           arrange(means) 
 
 # Calculate root mean square error (RMSE)
-sqrt(mean(test_predictions$linear_resid^2)) # 
-sqrt(mean(test_predictions$spline_resid^2)) # 
+sqrt(mean(test_predictions$linear_resid^2)) # 1.622984
+sqrt(mean(test_predictions$spline_resid^2)) # 1.930751
 # RMSE (same as above)  
 ss_RMSE_tmax <- test_predictions %>%
           summarise(
@@ -106,8 +105,7 @@ ss_RMSE_tmax <- test_predictions %>%
                     seadec_ma = Metrics::rmse(test_predictions$actual, test_predictions$seadec_ma)) %>%  # 1.528830
           pivot_longer(everything(), names_to = 'NA_fill', values_to = 'RMSE') %>%
           arrange(RMSE) 
-
-# two best = seadec_ma & ma
+# two best = ma (1.48693) & seadec_ma (1.52883)
 
 # plot interpolated values 
 linear_plot <- ggplot_na_imputations(x_with_na = takapourewa_tmax, 
@@ -121,7 +119,6 @@ spline_plot <- ggplot_na_imputations(x_with_na = takapourewa_tmax,
                       x_with_truth = longest_contingous_complete_case_tmax_df$takapourewa_tmax_c,
                       title = NULL,
                       subtitle = "spline")
-
 seadec_kalman_plot <- ggplot_na_imputations(x_with_na = takapourewa_tmax, 
                                      x_with_imputations = takapourewa_seadec_kalman, 
                                      x_with_truth = longest_contingous_complete_case_tmax_df$takapourewa_tmax_c,
@@ -181,7 +178,7 @@ test_predictions %>%
           geom_point(aes(x = seadec_ma, y = seadec_ma_resid), color = "black")+
           labs(x = 'predicted', y = 'residuals', title = "residual plot - seasonal decompositon with moving average")
           
-#  incorrect ?
+#  needs custom legend 
 test_predictions %>% 
           ggplot()+
           geom_abline(intercept=0, slope=0)+
