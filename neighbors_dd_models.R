@@ -164,13 +164,26 @@ nelson_dd_models %>%
 #### try again with both stations
 neighbors_dd <- rbind(nelson_dd_models, brothers_dd_models) 
 
+# geom_col for brothers & nelsons DD 
+neighbors_dd %>% 
+          select(year, station, cumsum_degree_day) %>% 
+          group_by(station, year) %>% 
+          summarise(dd = max(cumsum_degree_day)) %>% 
+          arrange(year, dd) %>% 
+          ggplot()+
+          geom_col(aes(x = factor(year), y = dd, fill = station), width = 0.5, position = "dodge")+
+          labs(x = "year",
+               y = "degree day (tmax_c)",
+               title = "degree day (tmax >10c)") + 
+          theme_minimal() 
+
 dd_station_year_summary <- neighbors_dd %>% 
           select(year, station, cumsum_degree_day) %>% 
           group_by(station, year) %>% 
           summarise(dd = max(cumsum_degree_day)) %>% 
-          pivot_wider(names_from = c(station), values_from = c(dd)) 
-          # %>% arrange(desc(brothers))
+          pivot_wider(names_from = c(station), values_from = dd) 
 
+# degree days by station facet_wrap ~year
 neighbors_dd %>% ggplot()+
           geom_line(aes(x = julian,
                         y = cumsum_degree_day,
@@ -183,15 +196,37 @@ neighbors_dd %>% ggplot()+
           #guides(color = "none")+
           theme_minimal() 
 
-# bar plot for brothers & nelsons DD 
+# year ranks
+# brothers
+dd_station_year_summary %>% 
+          select(year, brothers) %>% 
+          arrange(desc(brothers)) %>%  # arrange by hottest 
+          mutate(highest_dd_year_rank_brothers = 1:nrow(.)) %>% 
+          arrange(desc(year))  # arrange by year
+
+# nelson
+dd_station_year_summary %>% 
+          select(year, nelson_aero) %>% 
+          arrange(desc(nelson_aero)) %>%  # arrange by hottest 
+          mutate(highest_dd_year_rank_nelson = 1:nrow(.)) %>% 
+          arrange(desc(year))  # arrange by year
+
+# lines & points for brothers & nelsons DD 
 neighbors_dd %>% 
           select(year, station, cumsum_degree_day) %>% 
           group_by(station, year) %>% 
           summarise(dd = max(cumsum_degree_day)) %>% 
           arrange(year, dd) %>% 
           ggplot()+
-          geom_col(aes(x = factor(year), y = dd, fill = station), width = 0.5, position = "dodge")
-
+          geom_point(aes(x = factor(year), y = dd, color = station, size = 5))+
+          geom_line(aes(x = factor(year), y = dd, group = station), alpha = 0.5, linetype = "dashed")+
+          labs(x = "year",
+               y = "degree day (tmax_c)",
+               title = "degree day (tmax >10c)")+
+          guides(size = 'none')+
+          theme_minimal()
+          
+# vertical lines
 neighbors_dd %>% 
           select(year, station, cumsum_degree_day) %>% 
           group_by(station, year) %>% 
@@ -201,6 +236,12 @@ neighbors_dd %>%
           scale_color_gradient2(midpoint = mid, low = "blue", mid = "purple", high = "red")+
           geom_text_repel(aes(label = year,
                         x = station,
-                        y = dd),
-                        max.overlaps = 33)
+                        y = dd, 
+                        color = year, size = 5),
+                        max.overlaps = 33)+
+          labs(x = "station",
+               y = "degree day (tmax_c)",
+               title = "degree day (tmax >10c)")+ 
+          guides(size = 'none')+
+          theme_minimal() 
 
