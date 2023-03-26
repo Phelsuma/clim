@@ -94,41 +94,113 @@ neighbors_imputed_tmax_ts_seadec_ma %>%
                     min = min(tmax_c))
 
 # degree day models 
-neighbours_dd_models <- neighbors_imputed_tmax_ts_seadec_ma %>%
+# splitting by station because issues otherwise 
+
+# brothers 
+brothers_dd_models <- neighbors_imputed_tmax_ts_seadec_ma %>%
           as_tibble() %>% 
+          filter(station == 'brothers') %>% 
           mutate(julian = yday(date),
                  year = year(date),
                  month = month(date)) %>% 
-          #filter(julian < 305) %>% # Nov 1st ~~305
+          filter(month %in% c('9', '10')) %>% #pre-nesting (sep 1st - nov 1st) per Nelson et al 2018
           mutate(overthresh = case_when(tmax_c > 10 ~ (tmax_c - 10), TRUE ~ 0)) %>% #
           mutate(cumsum_degree_day = as.numeric(unlist(tapply(overthresh, year, cumsum)))) 
 
-# should be equal and represent 2*365 or 2*366 for leap years
-table(neighbours_dd_models$year)
-
 # plot degree day models
-neighbours_dd_models %>%
-          ggplot() +
-          geom_line(aes(
-                    x = julian,
-                    y = cumsum_degree_day,
-                    color = year,
-                    group = year)) +
-          geom_text(data = dd_df %>% filter(julian == last(julian)), aes(
-                    label = year,
-                    x = julian + 4,
-                    y = cumsum_degree_day + 1,
-                    color = year)) +
-          scale_colour_gradient(name = "year",
-                                low = "blue",
-                                high = "red") +
-          labs(
-                    x = "julian day",
-                    y = "degree day (tmax_c)",
-                    color = "year",
-                    title = "Takapourewa degree day (tmax)") + # scale_color_gradient2 not needed with facet_wrap (in that case use color = factor(year) and pick better colour ramp
-          guides(color = "none") +
-          theme_minimal()
 
+mid <- median(brothers_dd_models$year)
 
+brothers_dd_models %>%
+          ggplot()+
+          geom_line(aes(x = julian,
+                        y = cumsum_degree_day,
+                        group = year, 
+                        color = year))+
+          labs(x = "date (julian day)",
+               y = "degree day (tmax_c)",
+               title = "N Brother degree day (tmax >10c)") + # scale_color_gradient2 not needed with facet_wrap (in that case use color = factor(year) and pick better colour ramp +
+           geom_text(data = brothers_dd_models %>% 
+                     filter(julian == last(julian)), 
+                               aes(label = year,
+                                   x = julian + 4,
+                                   y = cumsum_degree_day + 1),
+                     check_overlap = TRUE)+
+          scale_color_gradient2(midpoint = mid, low = "blue", mid = "purple", high = "red")+
+          #guides(color = "none")+
+          theme_minimal() 
+
+# nelson DD 
+
+nelson_dd_models <- neighbors_imputed_tmax_ts_seadec_ma %>%
+          as_tibble() %>% 
+          filter(station == 'nelson_aero') %>% 
+          mutate(julian = yday(date),
+                 year = year(date),
+                 month = month(date)) %>% 
+          filter(month %in% c('9', '10')) %>% #pre-nesting (sep 1st - nov 1st) per Nelson et al 2018
+          mutate(overthresh = case_when(tmax_c > 10 ~ (tmax_c - 10), TRUE ~ 0)) %>% #
+          mutate(cumsum_degree_day = as.numeric(unlist(tapply(overthresh, year, cumsum)))) 
+
+nelson_dd_models %>%
+          ggplot()+
+          geom_line(aes(x = julian,
+                        y = cumsum_degree_day,
+                        group = year, 
+                        color = year))+
+          labs(x = "date (julian day)",
+               y = "degree day (tmax_c)",
+               title = "N Brother degree day (tmax >10c)") + # scale_color_gradient2 not needed with facet_wrap (in that case use color = factor(year) and pick better colour ramp +
+          geom_text(data = nelson_dd_models %>% 
+                              filter(julian == last(julian)), 
+                    aes(label = year,
+                        x = julian + 4,
+                        y = cumsum_degree_day + 1),
+                    check_overlap = TRUE)+
+          scale_color_gradient2(midpoint = mid, low = "blue", mid = "purple", high = "red")+
+          #guides(color = "none")+
+          theme_minimal() 
+
+#### try again with both stations
+neighbors_dd <- rbind(nelson_dd_models, brothers_dd_models) 
+
+dd_station_year_summary <- neighbors_dd %>% 
+          select(year, station, cumsum_degree_day) %>% 
+          group_by(station, year) %>% 
+          summarise(dd = max(cumsum_degree_day)) %>% 
+          pivot_wider(names_from = c(station), values_from = c(dd)) 
+          # %>% arrange(desc(brothers))
+
+neighbors_dd %>% ggplot()+
+          geom_line(aes(x = julian,
+                        y = cumsum_degree_day,
+                        group = station, 
+                        color = station))+
+          facet_wrap(~year)+
+          labs(x = "date (julian day)",
+               y = "degree day (tmax_c)",
+               title = "degree day (tmax >10c)") + 
+          #guides(color = "none")+
+          theme_minimal() 
+
+# bar plot for brothers & nelsons DD 
+neighbors_dd %>% 
+          select(year, station, cumsum_degree_day) %>% 
+          group_by(station, year) %>% 
+          summarise(dd = max(cumsum_degree_day)) %>% 
+          arrange(year, dd) %>% 
+          ggplot()+
+          geom_col(aes(x = factor(year), y = dd, fill = station), width = 0.5, position = "dodge")
+
+neighbors_dd %>% 
+          select(year, station, cumsum_degree_day) %>% 
+          group_by(station, year) %>% 
+          summarise(dd = max(cumsum_degree_day)) %>% 
+          ggplot()+
+          geom_point(aes(x = factor(station), y = dd, color = year))+
+          scale_color_gradient2(midpoint = mid, low = "blue", mid = "purple", high = "red")+
+          geom_text_repel(aes(label = year,
+                        x = station,
+                        y = dd),
+                        max.overlaps = 33)
 
